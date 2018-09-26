@@ -1,0 +1,81 @@
+---
+title: "assignment 2"
+name: "Hao Zeng"
+date: "Sep 25,2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load packages
+```{r}
+library(tidyverse)
+library(readr)
+
+```
+
+## 3.Write the R code to recreate the graph from the Activity 2 (Problem 4)
+```{r}
+lab <- read.csv("C:/Users/HaoZeng/Desktop/lab/lab2.csv")
+
+lab1 <- tidyr::gather(lab, key = 'time_category', value = "score", -patient_id)
+lab2 <- arrange(lab1, patient_id)
+
+lab3 <- tidyr::separate(lab2, time_category, c('time','category'))
+
+lab3%>%
+  group_by(time,category)%>%
+  select(time,category,score)%>%
+  summarise(mean = round(mean(score),2),sd = round(sd(score),2)) ->
+  lab4
+lab4$category <- as.factor(lab4$category)
+
+df <- data.frame(lab4)
+
+p <- position_dodge(0.1)
+df %>%
+  mutate(time = replace(time, time == "base", "baseline"))%>%
+  mutate(time = replace(time, time == "first", "one year"))%>%
+  mutate(time = replace(time, time == "second", "two years"))%>%
+  ggplot(aes(x = time, mean, ymin = mean-sd, ymax = mean+sd,color = category,width = 0.05))+
+  geom_line(aes(group = category), position = p) +
+  geom_errorbar(position = p)+
+  geom_point(position = p)+
+  coord_cartesian(ylim = c(0,100))+
+  theme_bw()+
+  theme(legend.title = element_blank(), legend.position = c(0.91, 0.2))+
+  labs(x = "Time of report", y = "Sampe mean and standard deviation")
+
+
+```
+
+##4. Download two files:
+
+```{r}
+coverage <- read_csv("coverage.csv", skip = 2)
+expenditure <- read_csv("expenditures.csv",skip = 2)
+coverage1 <- coverage[rowSums(is.na(coverage)) <= ncol(coverage) - 2,]
+expenditure1 <- expenditure[rowSums(is.na(coverage)) <= ncol(coverage) - 2,]
+
+
+```
+
+##4.1 Make the data frames "tidy".
+```{r}
+coverage2 <- tidyr::gather(coverage1, key = "time_category", value = "coverage", -Location)
+coverage_tidy <- tidyr::separate(coverage2, time_category, c('time','category'))
+expenditure2 <- tidyr::gather(expenditure1, key = "time_category", value = "expenditure", -Location)
+expenditure_tidy <- tidyr::separate(expenditure2, time_category, c('time','category'))
+
+```
+
+##4.2 Merge two data frames: the resulting data frame should contain information about coverage and expenditures
+```{r}
+coverage_total <- filter(coverage_tidy, category == "Total")
+expenditure_year <- filter(expenditure_tidy, time == 2013 | time ==2014)
+merge <- full_join(coverage_total,expenditure_year)
+
+```
+
